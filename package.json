@@ -1,0 +1,50 @@
+{
+  "name": "electron-app",
+  "version": "1.0.0",
+  "description": "Restaurant desktop ordering system",
+  "author": "Nurbek Abdiaxatov",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^36.4.0",
+    "electron-builder": "^26.0.12"
+  },
+  "dependencies": {
+    "ts-node": "^10.9.2",
+    "electron-updater": "^6.1.2"
+  },
+  "build": {
+    "appId": "com.nurbek.restaurantapp",
+    "productName": "RestaurantApp",
+    "directories": {
+      "output": "dist",
+      "buildResources": "public"
+    },
+    "files": [
+      "**/*",
+      "!dist",
+      "!**/*.md",
+      "!node_modules/.pnpm",
+      "!node_modules/.cache"
+    ],
+    "win": {
+      "icon": "public/logo.ico",
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "abdiaxatov",
+        "repo": "restaurant-app" 
+      }
+    ]
+  }
+}
