@@ -17,7 +17,7 @@ function createWindow() {
   });
 
   mainWindow.removeMenu();
-  mainWindow.loadURL("https://foothub-2.vercel.app/admin/login");
+  mainWindow.loadURL("https://xonim-uz.vercel.app/admin/login");
 
   mainWindow.on("closed", () => {
     mainWindow = null;
