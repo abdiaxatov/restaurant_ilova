@@ -12,12 +12,12 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: true
     }
   });
 
   mainWindow.removeMenu();
-  mainWindow.loadURL("https://restaurant-pink-psi.vercel.app/admin/dashboard");
+  mainWindow.loadURL("https://foothub-2.vercel.app/admin/login");
 
   mainWindow.on("closed", () => {
     mainWindow = null;
@@ -42,7 +42,7 @@ app.on("activate", () => {
 // ✅ Receipt HTML chop etish
 ipcMain.on("print-receipt", (event, html) => {
   const printWindow = new BrowserWindow({
-    width: 302,
+    width: 402,
     height: 600,
     show: false,
     webPreferences: {
@@ -54,7 +54,7 @@ ipcMain.on("print-receipt", (event, html) => {
 
   printWindow.webContents.on("did-finish-load", () => {
     setTimeout(() => {
-      printWindow.webContents.print({ silent: false, printBackground: true }, () => {
+      printWindow.webContents.print({ silent: true, printBackground: true }, () => {
         printWindow.close();
       });
     }, 200); // render tugagach biroz kutadi
