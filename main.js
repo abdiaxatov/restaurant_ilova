@@ -1,4 +1,4 @@
-
+// main.js
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const { autoUpdater } = require("electron-updater");
@@ -13,18 +13,17 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
-      nodeIntegration: false
-    }
+      nodeIntegration: false,
+    },
   });
 
   mainWindow.removeMenu();
-  mainWindow.loadURL("http://localhost:3000/admin/saboy");
+  mainWindow.loadURL("http://localhost:3000/admin/dashboard");
 
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
 
-  // Auto-updater
   mainWindow.webContents.once("did-finish-load", () => {
     autoUpdater.checkForUpdatesAndNotify();
   });
@@ -40,15 +39,15 @@ app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
-// Old method (backward compatibility)
+// Print single receipt
 ipcMain.on("print-receipt", (event, html) => {
   const printWindow = new BrowserWindow({
     width: 402,
     height: 600,
     show: false,
     webPreferences: {
-      sandbox: true
-    }
+      sandbox: true,
+    },
   });
 
   printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
@@ -57,7 +56,7 @@ ipcMain.on("print-receipt", (event, html) => {
     setTimeout(() => {
       printWindow.webContents.print({
         silent: true,
-        printBackground: true
+        printBackground: true,
       }, () => {
         printWindow.close();
       });
@@ -70,20 +69,16 @@ ipcMain.on("print-receipt", (event, html) => {
   });
 });
 
-// New method: Multiple printers with different HTML content
+// Print to multiple printers
 ipcMain.on("print-to-multiple", (event, { prints }) => {
-  console.log("Printing to multiple printers:", prints.length);
-  
   prints.forEach(({ html, printerName }, index) => {
-    console.log(`Setting up print job ${index + 1} for printer: ${printerName}`);
-    
     const printWindow = new BrowserWindow({
       width: 402,
       height: 600,
       show: false,
       webPreferences: {
-        sandbox: true
-      }
+        sandbox: true,
+      },
     });
 
     printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
@@ -92,69 +87,57 @@ ipcMain.on("print-to-multiple", (event, { prints }) => {
       setTimeout(() => {
         const printOptions = {
           silent: true,
-          printBackground: true
+          printBackground: true,
         };
-        
-        // Add specific printer if provided
-        if (printerName && printerName !== 'default') {
+
+        if (printerName && printerName !== "default") {
           printOptions.deviceName = printerName;
         }
-        
-        console.log(`Printing job ${index + 1} with options:`, printOptions);
-        
-        // Check if printer exists
-        if (printerName && printerName !== 'default') {
-          focused.webContents.getPrinters().then(availablePrinters => {
-            const printerExists = availablePrinters.some(p => p.name === printerName);
-            if (!printerExists) {
-              console.warn(`Printer '${printerName}' not found. Using default printer.`);
-              delete printOptions.deviceName;
+
+        printWindow.webContents.getPrintersAsync().then((availablePrinters) => {
+          const exists = availablePrinters.some(p => p.name === printerName);
+          if (!exists) delete printOptions.deviceName;
+
+          printWindow.webContents.print(printOptions, (success, failureReason) => {
+            if (success) {
+              console.log(`✅ Print job successful (${printerName || 'default'})`);
+            } else {
+              console.error(`❌ Print job failed: ${failureReason}`);
             }
-          }).catch(err => {
-            console.error("Error checking printers:", err);
+            printWindow.close();
           });
-        }
-        
-        printWindow.webContents.print(printOptions, (success, failureReason) => {
-          if (success) {
-            console.log(`✅ Print job ${index + 1} successful (printer: ${printerName || 'default'})`);
-          } else {
-            console.error(`❌ Print job ${index + 1} failed:`, failureReason, `(printer: ${printerName || 'default'})`);
-          }
+        }).catch(err => {
+          console.error("Printer check error:", err);
           printWindow.close();
         });
-      }, 200 + (index * 500)); // Stagger print jobs by 500ms each
+      }, 200 + index * 500);
     });
 
     printWindow.webContents.on("did-fail-load", (e, code, desc) => {
-      console.error(`Print content load error for job ${index + 1}: ${desc} (${code})`);
+      console.error(`Print content load error: ${desc} (${code})`);
       printWindow.close();
     });
   });
 });
 
-// Get available printers
+// Printer list handler
 ipcMain.handle("get-printers", async () => {
   try {
-    console.log("Printerlarni olish so'rovi keldi");
-    const focused = BrowserWindow.getFocusedWindow() || mainWindow;
-    
-    if (!focused) {
-      console.error("Hech qanday oyna topilmadi");
-      return [];
-    }
+    const targetWindow = BrowserWindow.getAllWindows()[0];
+    if (!targetWindow) return [];
 
-    const printers = await focused.webContents.getPrinters();
-    console.log("Topilgan printerlar soni:", printers.length);
-    console.log("Available printers:", printers.map(p => ({ 
-      name: p.name, 
-      displayName: p.displayName,
-      status: p.status 
-    })));
-    
+    await new Promise(resolve => {
+      if (targetWindow.webContents.isLoading()) {
+        targetWindow.webContents.once("did-finish-load", resolve);
+      } else {
+        resolve();
+      }
+    });
+
+    const printers = await targetWindow.webContents.getPrintersAsync();
     return printers;
   } catch (error) {
-    console.error("Printerlarni olishda xatolik:", error);
+    console.error("❌ Failed to get printers:", error);
     return [];
   }
 });
